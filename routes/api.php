@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductTypeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderProductController;
+use App\Http\Controllers\ProductRateController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,9 +27,9 @@ Route::post('/product-filter', [ProductController::class,'productsFilter']);
 Route::delete('/remove-cart-item/{orderProduct}', [OrderProductController::class,'destroy']);
 Route::post('/update-cart-item', [OrderProductController::class,'updateCar']);
 Route::post('/cart', [OrderProductController::class,'store']);
+
 Route::get('/cart', [OrderProductController::class,'index']);
-Route::get('/bestrate', [ProductController::class,'bestRate']);
-Route::get('/bestseller', [ProductController::class,'bestSeller']);
+
 Route::get('/products', [ProductController::class,'index']);
 Route::get('products/{product}', [ProductController::class,'show']);
 Route::get('product-types-parent', [ProductTypeController::class,'typeParent']);
@@ -38,10 +39,22 @@ Route::resource('orders', OrderController::class);
 Route::resource('order-product', OrderProductController::class);
 Route::post('products', [ProductController::class,'store']);
 Route::get('/orders-client', [OrderController::class,'ordersclient']);
-  Route::middleware(['customAuth'])->group(function () {
+Route::post('/rating', [ProductRateController::class,'store']);
 
-    Route::post('/deleteFile', [ProductController::class,'deleteFile']);
-    Route::post('/addFile', [ProductController::class,'addFile']);
+Route::post('/deleteFile', [ProductController::class,'deleteFile']);
+Route::post('/addFile', [ProductController::class,'addFile']);
+Route::delete('products/{product}', [ProductController::class,'destroy']);
+Route::put('products/{product}', [ProductController::class,'update']);
 
-    Route::delete('products/{product}', [ProductController::class,'destroy']);
+Route::middleware(['customAuth'])->group(function () {
+
+
+
 });
+
+Route::get('/bestviews', [ProductController::class,'bestView']);
+Route::get('/bestrate', [ProductController::class,'bestRate']);
+Route::post('/bestproduct', [ProductController::class,'best']);
+Route::post('/getsellByPeriode', [OrderController::class,'sellerPeriode']);
+Route::get('/getsellAllTime', [ProductController::class,'sellerAlltime']);
+Route::get('/getuserSeller', [OrderController::class,'UserBestSeller']);

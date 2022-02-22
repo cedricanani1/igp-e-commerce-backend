@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use App\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 class ProductController extends Controller
@@ -35,20 +37,22 @@ class ProductController extends Controller
     public function productsFilter(Request $request)
     {
         if ($request->key == 1) {
-            $products =  Product::where('product_type_id',$request->type)->orderBy("price","ASC")->get();
+            $products =  Product::whereIn('product_type_id',$request->type)->orderBy("price","ASC")->get();
         }
         if ($request->key == 2) {
-            $products =  Product::where('product_type_id',$request->type)->orderByDesc("price")->get();
+            $products =  Product::whereIn('product_type_id',$request->type)->orderByDesc("price")->get();
         }
         if ($request->key == 3) {
-            $products =  Product::where('product_type_id',$request->type)->orderByDesc("created_at")->get();
+            $products =  Product::whereIn('product_type_id',$request->type)->orderByDesc("created_at")->get();
         }
         if ($request->key == 4) {
-            $products =  Product::where('product_type_id',$request->type)->withCount('order')->orderByDesc("order_count")->get();
+            $products =  Product::whereIn('product_type_id',$request->type)->withCount('order')->orderByDesc("order_count")->get();
         }
         if ($request->key == 5) {
-            $products =  Product::where('product_type_id',$request->type)->withCount('rate')->orderByDesc("rate_count")->get();
+            $products =  Product::whereIn('product_type_id',$request->type)->withCount('rate')->orderByDesc("rate_count")->get();
         }
+
+
 
         return response()->json($products);
     }
@@ -72,9 +76,12 @@ class ProductController extends Controller
     }
 
 
-    public function bestSeller()
+    public function best(Request $request)
     {
-        $products =  Product::withCount('order','type')->orderByDesc("order_count")->get();
+        $status= $request->status;
+        $products =  Product::withCount('order','type')->orderByDesc("order_count")->whereHas('order', function($q) use ($status){
+            $q->where('status', $status);
+        })->get();
         foreach ($products as $key => $product) {
             $rate=0;
             foreach ($product->rate as $key => $value) {
@@ -86,8 +93,37 @@ class ProductController extends Controller
             }else{
                 $product->start =  0;
             }
-
         }
+        return response()->json($products);
+    }
+
+    public function sellerAlltime()
+    {
+
+        $products= Product::has('order')->get();
+        $orders =  Order::with('cart')->where('status', 'delivered')->get();
+        foreach ($products as $key => $product) {
+                    $product->count = 0;
+                    $product->amount = 0;
+            foreach ($orders as $key => $order) {
+                foreach ($order->cart as $key => $cart) {
+                   if ($product->id === $cart->product_id) {
+                       $product->count += $cart->quantity;
+                       $product->amount += $cart->quantity * $cart->price;
+                   }else{
+                    $product->count += 0;
+                    $product->amount += 0;
+                   }
+                }
+            }
+        }
+        return response()->json($products);
+    }
+
+    public function bestview()
+    {
+        $products =  Product::orderByDesc("view")->orderByDesc("view")->get();
+
         return response()->json($products);
     }
 
@@ -124,7 +160,7 @@ class ProductController extends Controller
             }
         }
         $product->photo = $file_path;
-        $product->slug =  $request->slug;
+        $product->slug =  str_replace(" ","-",$request->libelle);
         $product->stock =  $request->stock;
         $product->price =  $request->price;
         $product->product_type_id =  $request->product_type_id;
@@ -184,6 +220,8 @@ class ProductController extends Controller
     {
 
         $rate=0;
+        $product->view +=1;
+        $product->save();
        foreach ($product->rate as $key => $value) {
         $rate += (int) $value->rate;
        }
@@ -221,9 +259,8 @@ class ProductController extends Controller
         $product->description =  $request->description;
         $product->discount =  $request->discount;
         $product->stock =  $request->stock;
-        $product->slug =  $request->slug;
+        $product->slug =  str_replace(" ","-",$request->libelle);
         $product->price =  $request->price;
-        $product->parent_id =  $request->parent_id;
         $product->product_type_id =  $request->product_type_id;
         $product->save();
 

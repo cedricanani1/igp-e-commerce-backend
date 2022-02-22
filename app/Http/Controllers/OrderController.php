@@ -7,9 +7,12 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Models\OrderProduct;
 use App\Models\Product;
+use App\Notifications\Order as NotificationsOrder;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use App\Services\UserService as User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -42,7 +45,13 @@ class OrderController extends Controller
         if (!$user) {
             return response()->json([
                 'state' =>false,
-                'message' =>'Veillez vous connecter',
+                'message' =>'Veuillez vous connecter',
+            ]);
+        }
+        if (!$user->email_verified_at) {
+            return response()->json([
+                'state' =>false,
+                'message' =>'Votre compte est inactif',
             ]);
         }
 
@@ -50,6 +59,61 @@ class OrderController extends Controller
 
 
         return response()->json($orders);
+    }
+
+    public function sellerPeriode(Request $request)
+    {
+        $from= $request->from;
+        $to= $request->to;
+        $products= Product::has('order')->get();
+        $orders =  Order::with('cart')->whereBetween(DB::raw("(STR_TO_DATE(orders.updated_at,'%Y-%m-%d'))"),[$from,$to])->where('status', 'delivered')->get();
+        foreach ($products as $key => $product) {
+                    $product->count = 0;
+                    $product->amount = 0;
+            foreach ($orders as $key => $order) {
+                foreach ($order->cart as $key => $cart) {
+                   if ($product->id === $cart->product_id) {
+                       $product->count += $cart->quantity;
+                       $product->amount += $cart->quantity * $cart->price;
+                   }else{
+                    $product->count += 0;
+                    $product->amount += 0;
+                   }
+                }
+            }
+        }
+        return response()->json($products);
+    }
+
+    public function UserBestSeller()
+    {
+        $users = $this->UserSeller();
+        $orders =  Order::with('cart')->get();
+        foreach ($users as $key => $user) {
+            $user->order_count = 0;
+
+            $user->count_article = 0;
+            $user->cumul_amount = 0;
+            foreach ($orders as $key => $order) {
+                if ($user->id === $order->user_id) {
+                    $user->order_count += 1;
+
+                    foreach ($order->cart as $key => $cart) {
+                        if ($user->id === $cart->user_id) {
+                            $user->count_article += $cart->quantity;
+                            $user->cumul_amount += $cart->quantity * $cart->price;
+                        }else{
+                         $user->count_article += 0;
+                         $user->count_article += 0;
+                        }
+                     }
+                }else{
+                    $user->order_count += 0;
+                }
+
+            }
+        }
+        return response()->json($users);
     }
 
     /**
@@ -61,13 +125,18 @@ class OrderController extends Controller
     public function store(StoreOrderRequest $request)
     {
 
-
         $token = $request->header('Authorization');
         $user = $this->userToken($token);
         if (!$user) {
             return response()->json([
                 'state' =>false,
-                'message' =>'Veillez vous connecter',
+                'message' =>'Veuillez vous connecter',
+            ]);
+        }
+        if (!$user->email_verified_at) {
+            return response()->json([
+                'state' =>false,
+                'message' =>'Votre compte est inactif',
             ]);
         }
         $order =  new Order();
@@ -79,12 +148,17 @@ class OrderController extends Controller
         $order->prenoms =  $request->prenoms;
         $order->email =  $request->email;
         $order->phone =  $request->phone;
-        $order->shipping =  $request->shipping;
-        $order->location =  $request->location;
-        // $order->other =  $request->order['other'];
+        // $order->raison_social =  $request->raison_social;
+        $order->shipping =  $request->ville;
+        $order->location =  $request->commune;
         $order->save();
         $amount = 0;
         $cart =  OrderProduct::where('order_id',null)->get();
+
+        $this->adminNotif('Gestionnaire e-commerce','e-commerce-orders','e-commerce');
+
+        // Notification::send($users,new NotificationsOrder($order));
+
         foreach ($cart as $key =>  $item) {
 
             $product =  Product::findOrFail($item['product_id']);
@@ -119,6 +193,7 @@ class OrderController extends Controller
     {
         foreach ($order->cart as $key => $value) {
             $value->product;
+            $value->product->type;
         }
         return response()->json($order);
     }
@@ -129,6 +204,7 @@ class OrderController extends Controller
      * @param  \App\Models\Order  $order
      * @return \Illuminate\Http\Response
      */
+     
     public function edit(Order $order)
     {
         //
@@ -181,6 +257,23 @@ class OrderController extends Controller
 
         if(User::get($token)->success == true) {
             return User::get($token)->user;
+        }else{
+            return null;
+        }
+    }
+    private function adminNotif($role,$url,$module){
+
+        if(User::getAdmin($role,$url,$module)->success == true) {
+            return User::getAdmin($role,$url,$module)->user;
+        }else{
+            return null;
+        }
+    }
+
+    private function UserSeller(){
+
+        if(User::getUserSeller()->success == true) {
+            return User::getUserSeller()->users;
         }else{
             return null;
         }

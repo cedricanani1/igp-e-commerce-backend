@@ -20,6 +20,6 @@ class Product extends Model
         return $this->hasMany(ProductRate::class,'product_id');
     }
     public function order(){
-        return $this->belongsToMany(Order::class,'order_products','product_id','order_id');
+        return $this->belongsToMany(Order::class,'order_products','product_id','order_id')->withPivot('updated_at','created_at');
     }
 }

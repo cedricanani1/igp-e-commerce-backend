@@ -24,7 +24,7 @@ class OrderProductController extends Controller
         if (!$user) {
             return response()->json([
                 'state' =>false,
-                'message' =>'Veillez vous connecter au prealable',
+                'message' =>'Veuillez vous connecter au prealable',
             ]);
         }
         $cart =  OrderProduct::with('product')->where('order_id',null)->where('user_id',$user->id)->get();
@@ -33,7 +33,7 @@ class OrderProductController extends Controller
             'state' =>true,
             'data' =>$cart,
         ]);
-        return response()->json($cart);
+        // return response()->json($cart);
     }
 
     /**
@@ -59,7 +59,7 @@ class OrderProductController extends Controller
             if (!$user) {
                 return response()->json([
                     'state' =>false,
-                    'message' =>'Veillez vous connecter',
+                    'message' =>'Veuillez vous connecter',
                 ]);
             }
             $cart =  new OrderProduct();

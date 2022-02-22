@@ -27,7 +27,7 @@ class StoreOrderRequest extends FormRequest
             'nom' => 'required',
             'prenoms' => 'required',
             'phone' => 'required',
-            'shipping' => 'required',
+            'ville' => 'required',
         ];
     }
 }

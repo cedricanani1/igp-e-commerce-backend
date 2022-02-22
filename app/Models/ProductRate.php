@@ -8,4 +8,5 @@ use Illuminate\Database\Eloquent\Model;
 class ProductRate extends Model
 {
     use HasFactory;
+
 }

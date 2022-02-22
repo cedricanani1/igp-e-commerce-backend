@@ -40,16 +40,22 @@ class ProductRateController extends Controller
     {
             $token = $request->header('Authorization');
             $user = $this->userToken($token);
-            $cart =  new ProductRate();
+            if (!$user) {
+                return response()->json([
+                    'state' =>false,
+                    'message' =>'Veillez vous connecter au prealable',
+                ]);
+            }
+            $rating =  new ProductRate();
             $product =  Product::findOrFail($request['product_id']);
             if ($product) {
-                $cart->rate =  $request['rate'];
-                $cart->product_id =  $product->id;
-                $cart->user_id =  $user->id;
-                $cart->message =  $product->message;
-                $cart->save();
+                $rating->rate =  $request['rate'];
+                $rating->product_id =  $product['id'];
+                $rating->user_id =  $user['id'];
+                $rating->message =  $request['message'];
+                $rating->save();
             }
-            if ($cart) {
+            if ($rating) {
                 return response()->json([
                     'state' =>true
                 ]);
